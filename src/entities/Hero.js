@@ -21,7 +21,6 @@ class Hero extends Phaser.GameObjects.Sprite {
 
         this.keys = scene.cursorKeys;
         this.input = {};
-
         this.setupAnimations();
         this.setupMovement();
     }
@@ -41,7 +40,7 @@ class Hero extends Phaser.GameObjects.Sprite {
             methods: {
                 onEnterState: (lifecycle) => {
                     this.anims.play('hero-' + lifecycle.to);
-                    console.log(lifecycle);
+                   // console.log(lifecycle);
                 },
             },
         });
@@ -110,6 +109,7 @@ class Hero extends Phaser.GameObjects.Sprite {
 
     kill() {
         if (this.moveState.can('die')) {
+            this.scene.sound.play('heroDeath', { volume: this.scene.registry.get('volume') });
             this.setTint(0xff0000);
             this.body.checkCollision.none = true;
             this.moveState.die();
@@ -141,9 +141,9 @@ class Hero extends Phaser.GameObjects.Sprite {
             this.body.setAccelerationX(0);
         }
         if (this.input.didPressJump && this.jumpCount < 1) {
-            this.jumpCount++; // Inkrementacja licznika skoków
-            this.body.setVelocityY(-400); // Zmieniamy tę linię
-            // Usuwamy tutaj if-else odpowiedzialny za zmianę prędkości, jeśli jest to niepotrzebne
+            this.scene.sound.play('jumpSound', { volume: this.scene.registry.get('volume') });
+            this.jumpCount++;
+            this.body.setVelocityY(-400);
         }
         if (this.moveState.is('jumping') || this.moveState.is('flipping')) {
             if (!this.keys.up.isDown && this.body.velocity.y < -150) {

@@ -2,15 +2,21 @@
 import Phaser from 'phaser';
 import Hero from '../entities/Hero';
 import Enemy from '../entities/Enemy';
-import initAnims from '../mixins/enemyAnims';
 
 class Game extends Phaser.Scene {
     constructor() {
         super({key: 'GameScene'});
+        this.collectedDiamonds = 0;
+        this.totalDiamonds = 0;
+        this.remainingEnemies = 0;
+        this.totalEnemies = 0;
+        this.enemiesText = null;
+
     }
 
     preload() {
         this.load.tilemapTiledJSON('level-1', 'assets/tilemaps/level-1.json');
+        this.load.tilemapTiledJSON('level-2', 'assets/tilemaps/level-2.json');
 
         this.load.spritesheet('world-1-sheet', 'assets/tilesets/world-1.png', {
             frameWidth: 32,
@@ -56,13 +62,30 @@ class Game extends Phaser.Scene {
             frameWidth: 32,
             frameHeight: 64,
         });
+        this.load.image('collectableKey', 'assets/collectibles/diamond.png');
+        this.load.audio('gameMusic', 'assets/music/game_music.wav');
+        this.load.audio('stepMud', 'assets/music/step_mud.wav');
+        this.load.audio('jumpSound', 'assets/music/jump.wav');
+        this.load.audio('killEnemy', 'assets/music/kill_enemy.wav');
+        this.load.audio('coinPickup', 'assets/music/coin_pickup.wav');
+        this.load.audio('heroDeath', 'assets/music/swipe.wav');
     }
 
     create(data) {
-
+        const volume = this.registry.get('volume');
+        let volume2;
+        if(volume >= 0.1)
+        {
+            volume2 = volume - 0.1;
+        }else{
+            volume2 = volume;
+        }
+        this.gameMusic = this.sound.add('gameMusic', { loop: true, volume: volume2 });
+        this.gameMusic.play();
         this.cursorKeys = this.input.keyboard.createCursorKeys();
-        this.enemyGroup = this.physics.add.group({classType: Enemy}); // Utwórz grupę wrogów
-
+        this.enemyGroup = this.physics.add.group({classType: Enemy});
+        const levelKey = data.level || 'level-1';
+        this.levelKey2 = data.level || 'level-1';
         this.anims.create({
             key: 'hero-idle',
             frames: this.anims.generateFrameNumbers('hero-idle-sheet'),
@@ -123,50 +146,140 @@ class Game extends Phaser.Scene {
             frameRate: 8,
             repeat: -1
         });
-        this.addMap();
+        this.addMap(levelKey);
 
         this.addHero();
         this.createEnemy();
-        //initAnims(this.anims);
-        //this.createEnemySpawns();
+        this.createCollectables();
+        this.createUI();
+        this.updateDiamondsText();
+        this.createEnemiesUI();
+        this.updateEnemiesText();
+        this.createEndZone();
         this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
+        const menuButton = this.add.text(this.cameras.main.width - 50, this.cameras.main.height - 50, 'Menu', {
+            fontSize: '32px',
+            fill: '#FFF'
+        })
+            .setInteractive()
+            .setOrigin(0.8, 0.2)
+            .setScrollFactor(0)
+            .on('pointerdown', () => {
+                this.scene.start('MenuScene');
+            });
+        this.children.bringToTop(menuButton);
+        this.events.on('shutdown', this.shutdown, this);
+        this.events.on('pause', this.shutdown, this);
+
 
     }
 
+    shutdown() {
+        if (this.gameMusic) {
+            this.gameMusic.stop();
+        }
+    }
+    createEndZone() {
+        const endObject = this.map.findObject("Objects", obj => obj.name === "End");
+
+        if (endObject) {
+            const endZone = this.add.zone(endObject.x, endObject.y)
+                .setSize(endObject.width, endObject.height)
+                .setOrigin(0, 1);
+
+            this.physics.world.enable(endZone);
+            endZone.body.setAllowGravity(false);
+            endZone.body.moves = false;
+
+            this.physics.add.overlap(this.hero, endZone, this.handleLevelCompletion, null, this);
+        }
+    }
+
+    handleLevelCompletion(hero, endZone) {
+        if (this.collectedDiamonds === this.totalDiamonds && this.remainingEnemies === 0) {
+            console.log('Level complete!');
+            this.hero.kill();
+            this.collectedDiamonds = 0;
+            this.updateDiamondsText();
+            this.updateEnemiesText();
+            if (this.levelKey2 === 'level-1') {
+                this.scene.start('GameScene', {level: 'level-2'});
+            } else if (this.levelKey2 === 'level-2') {
+                this.scene.start('GameScene', {level: 'level-1'});
+            }
+        }else{
+            // Wyświetlenie komunikatu
+            const message = `Zbierz wszystkie diamenty i pokonaj wszystkich wrogów!`;
+            const text = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY, message, {
+                fontSize: '15px',
+                fill: '#ffffff',
+                backgroundColor: '#000000',
+                padding: { x: 20, y: 10 },
+                align: 'center'
+            })
+                .setScrollFactor(0)
+                .setOrigin(0.5);
+
+
+            this.time.delayedCall(1500, () => {
+                text.destroy();
+            });
+        }
+    }
+    createEnemiesUI() {
+        this.enemiesText = this.add.text(this.cameras.main.width - 10, 10, '0/0', {
+            fontSize: '32px',
+            fill: '#FF0000'
+        }).setScrollFactor(0).setOrigin(1, 0);
+    }
+    createUI() {
+        this.diamondsText = this.add.text(10, 10, '0/0', {
+            fontSize: '32px',
+            fill: '#FFFFFF'
+        }).setScrollFactor(0).setOrigin(0, 0);
+    }
+    updateDiamondsText() {
+        this.diamondsText.setText(`${this.collectedDiamonds}/${this.totalDiamonds}`);
+    }
+    collectItem(player, item) {
+        item.disableBody(true, true);
+        this.sound.play('coinPickup', { volume: this.registry.get('volume') });
+        this.collectedDiamonds += 1;
+        this.updateDiamondsText();
+    }
+    createCollectables() {
+        const collectablesLayer = this.map.getObjectLayer('collectables').objects;
+        this.collectables = this.physics.add.staticGroup();
+        this.totalDiamonds = collectablesLayer.length;
+        //this.updateDiamondsText();
+        collectablesLayer.forEach(collectable => {
+            const collectableSprite = this.collectables.create(collectable.x, collectable.y - collectable.height, 'collectableKey').setOrigin(0);
+        });
+    }
     createEnemySpawns() {
-        // Znajdź warstwę "enemy_spawns"
         const enemySpawnLayer = this.map.getObjectLayer('enemy_spawns');
-        // Przeiteruj po każdym obiekcie w warstwie
         enemySpawnLayer.objects.forEach(spawnPoint => {
             this.createEnemy(spawnPoint.x, spawnPoint.y);
         });
     }
 
     handleCollisions() {
+        this.physics.add.overlap(this.hero, this.collectables, this.collectItem, null, this);
         this.physics.add.collider(this.hero, this.enemies, this.handleHeroEnemyCollision, null, this);
     }
 
     handleHeroEnemyCollision(hero, enemy) {
 
         if ((hero.body.velocity.y >= 0 && hero.y < enemy.y - enemy.body.height / 2)) {
-            enemy.kill(); // Zabij przeciwnika
+            enemy.kill();
+            this.remainingEnemies--;
+            this.updateEnemiesText();
         } else {
-            hero.kill(); // Zabij bohatera
+            hero.kill();
         }
     }
 
-    // createEnemy() {
-    //   //return new Enemy(this, 200, 200);
-    //   this.enemy = new Enemy(this, 200, 200);
-    //   this.enemy.setScale(0.6667);
-    //
-    // }
-    // createEnemy(x, y) {
-    //   const enemy = new Enemy(this, x, y); // Przekazanie pozycji x, y
-    //   enemy.setScale(0.6667); // Skalowanie, jeśli jest potrzebne
-    //   enemy.setImmovable(true); // Zapobieganie przesuwaniu się przez gracza
-    //   this.enemyGroup.add(enemy); // Dodajemy wroga do grupy, jeśli używamy grupy
-    // }
+
     createEnemy() {
         const enemySpawns = this.map.getObjectLayer('enemy_spawns').objects;
         this.enemies = this.physics.add.group({classType: Enemy, runChildUpdate: true});
@@ -178,10 +291,14 @@ class Game extends Phaser.Scene {
             enemy.setCollideWorldBounds(true);
             enemy.body.setImmovable(true);
         });
-
+        this.totalEnemies = enemySpawns.length;
+        this.remainingEnemies = this.totalEnemies;
+        //this.updateEnemiesText();
         this.physics.add.collider(this.enemies, this.map.getLayer('Ground').tilemapLayer);
     }
-
+    updateEnemiesText() {
+        this.enemiesText.setText(`${this.remainingEnemies}/${this.totalEnemies}`);
+    }
     addHero() {
         this.hero = new Hero(this, this.spawnPos.x, this.spawnPos.y);
 
@@ -203,9 +320,9 @@ class Game extends Phaser.Scene {
         });
     }
 
-    addMap() {
+    addMap(levelKey) {
 
-        this.map = this.make.tilemap({key: 'level-1'});
+        this.map = this.make.tilemap({key: levelKey});
         const groundTiles = this.map.addTilesetImage('world-1', 'world-1-sheet');
         const backgroundTiles = this.map.addTilesetImage('clouds', 'clouds-sheet');
 
@@ -234,8 +351,6 @@ class Game extends Phaser.Scene {
 
         this.map.createStaticLayer('Foreground', groundTiles);
 
-        // const debugGraphics = this.add.graphics();
-        // groundLayer.renderDebug(debugGraphics);
 
     }
 
@@ -248,6 +363,12 @@ class Game extends Phaser.Scene {
             this.addHero();
             this.enemies.clear(true);
             this.createEnemy();
+            this.collectables.clear(true);
+            this.createCollectables();
+            this.collectedDiamonds = 0;
+            this.updateDiamondsText();
+            this.updateEnemiesText();
+            this.createEndZone();
         }
         this.enemies.getChildren().forEach(enemy => {
             enemy.update();
