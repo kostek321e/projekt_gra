@@ -31,20 +31,20 @@ class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.body.setVelocityX(this.speed * this.direction);
     }
 
-    turnAround() {
-        this.moving = false;
-        this.body.setVelocityX(0);
-        if (this.turnAroundTimer) {
-            this.turnAroundTimer.remove();
-        }
-
-        this.turnAroundTimer = this.scene.time.delayedCall(2000, () => {
-            this.distanceMoved = 0;
-            this.direction *= -1;
-            this.body.setVelocityX(this.speed * this.direction);
-            this.moving = true;
-        });
-    }
+    // turnAround() {
+    //     this.moving = false;
+    //     this.body.setVelocityX(0);
+    //     if (this.turnAroundTimer) {
+    //         this.turnAroundTimer.remove();
+    //     }
+    //
+    //     this.turnAroundTimer = this.scene.time.delayedCall(2000, () => {
+    //         this.distanceMoved = 0;
+    //         this.direction *= -1;
+    //         this.body.setVelocityX(this.speed * this.direction);
+    //         this.moving = true;
+    //     });
+    // }
 
     update() {
         if (!this.active) {
@@ -54,20 +54,20 @@ class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (this.moving) {
             this.body.setVelocityX(this.speed * this.direction);
 
-            this.distanceMoved += Math.abs(this.body.deltaX());
-            if (this.distanceMoved >= 300) {
-                this.distanceMoved = 0;
-                this.moving = false;
-                this.body.setVelocityX(0);
-
-                if (this.turnAroundTimer) {
-                    this.turnAroundTimer.remove();
-                }
-                this.turnAroundTimer = this.scene.time.delayedCall(2000, () => {
-                    this.direction *= -1;
-                    this.moving = true;
-                });
-            }
+            // this.distanceMoved += Math.abs(this.body.deltaX());
+            // if (this.distanceMoved >= 300) {
+            //     this.distanceMoved = 0;
+            //     this.moving = false;
+            //     this.body.setVelocityX(0);
+            //
+            //     if (this.turnAroundTimer) {
+            //         this.turnAroundTimer.remove();
+            //     }
+            //     this.turnAroundTimer = this.scene.time.delayedCall(2000, () => {
+            //         this.direction *= -1;
+            //         this.moving = true;
+            //     });
+            // }
         }
 
         if (this.moving) {
@@ -80,7 +80,10 @@ class Enemy extends Phaser.Physics.Arcade.Sprite {
             this.anims.play('enemy-idle', true);
         }
     }
-
+    turnAround() {
+        this.direction *= -1; // Zmiana kierunku na przeciwny
+        this.body.setVelocityX(this.speed * this.direction); // Zaktualizuj prędkość, aby przeciwnik poruszał się w nowym kierunku
+    }
     kill() {
         this.setTint(0xff0000);
         this.setVelocity(0, -200);

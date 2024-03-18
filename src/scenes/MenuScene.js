@@ -34,9 +34,10 @@ class MenuScene extends Phaser.Scene {
         });
         let gameStarted = this.registry.get('gameStarted');
         let buttonText = gameStarted ? 'Restart' : 'Play';
+        const currentLevel = this.registry.get('currentLevel') || 'level-1'; // Używa obecnego poziomu lub domyślnie 'level-1'
         let playText = this.add.text(this.cameras.main.width - 150, this.cameras.main.height - 100, buttonText, { fontSize: '32px', fill: '#FFF' })
             .setInteractive()
-            .on('pointerdown', () => this.scene.start('GameScene', { level: 'level-1' }));
+            .on('pointerdown', () => this.scene.start('GameScene', { level: currentLevel }));
 
         let levelSelectText = this.add.text(this.cameras.main.width - 150, this.cameras.main.height - 50, 'Select Level', { fontSize: '32px', fill: '#FFF' })
             .setInteractive()

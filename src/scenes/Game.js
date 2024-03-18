@@ -90,6 +90,7 @@ class Game extends Phaser.Scene {
         this.enemyGroup = this.physics.add.group({classType: Enemy});
         const levelKey = data.level || 'level-1';
         this.levelKey2 = data.level || 'level-1';
+        this.registry.set('currentLevel', this.levelKey2);
         this.anims.create({
             key: 'hero-idle',
             frames: this.anims.generateFrameNumbers('hero-idle-sheet'),
@@ -175,7 +176,6 @@ class Game extends Phaser.Scene {
         this.children.bringToTop(menuButton);
         this.events.on('shutdown', this.shutdown, this);
         this.events.on('pause', this.shutdown, this);
-
 
     }
     createEnemiesUI() {
@@ -316,6 +316,9 @@ class Game extends Phaser.Scene {
         this.remainingEnemies = this.totalEnemies;
         //this.updateEnemiesText();
         this.physics.add.collider(this.enemies, this.map.getLayer('Ground').tilemapLayer);
+        this.physics.add.overlap(this.enemies, this.turnPoints, (enemy, turnPoint) => {
+            enemy.turnAround(); // Zakładamy, że przeciwnicy mają metodę turnAround
+        });
     }
     updateEnemiesText() {
         this.enemiesText.setText(`${this.remainingEnemies}/${this.totalEnemies}`);
@@ -349,7 +352,14 @@ class Game extends Phaser.Scene {
 
         const backgroundLayer = this.map.createStaticLayer('Background', backgroundTiles);
         backgroundLayer.setScrollFactor(0.6);
-
+        const turnPointsObjects = this.map.getObjectLayer('turnpoints').objects;
+        this.turnPoints = this.physics.add.staticGroup();
+        turnPointsObjects.forEach(pointObj => {
+            if (pointObj.name === "TurnPoint") {
+                let turnPoint = this.turnPoints.create(pointObj.x + pointObj.width * 0.5, pointObj.y + pointObj.height * 0.5);
+                turnPoint.setVisible(false);
+          }
+        });
         const groundLayer = this.map.createStaticLayer('Ground', groundTiles);
         groundLayer.setCollision([1, 2, 4], true);
 
