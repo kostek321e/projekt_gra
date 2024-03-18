@@ -45,7 +45,12 @@ class MenuScene extends Phaser.Scene {
 
         let quitText = this.add.text(this.cameras.main.width - 150, this.cameras.main.height, 'Quit', { fontSize: '32px', fill: '#FFF' })
             .setInteractive()
-            .on('pointerdown', () => this.game.destroy(true));
+            .on('pointerdown', () => {
+                if (this.scale.isFullscreen) {
+                    this.scale.stopFullscreen();
+                }
+                this.game.destroy(true);
+            });
 
         playText.setOrigin(1, 1);
         levelSelectText.setOrigin(1, 1);

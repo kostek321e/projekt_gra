@@ -157,8 +157,11 @@ class Game extends Phaser.Scene {
         this.addMap(levelKey);
         if (this.sys.game.device.os.android || this.sys.game.device.os.iOS) {
         //if (1 ==1 ) {
-                this.createMobileControls();
+            this.createMobileControls();
+            this.scale.startFullscreen();
+
         }
+
         this.addHero();
         this.createEnemy();
         this.createCollectables();
