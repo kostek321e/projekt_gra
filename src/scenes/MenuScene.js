@@ -32,8 +32,9 @@ class MenuScene extends Phaser.Scene {
             this.registry.set('volume', volume);
             this.menuMusic.setVolume(volume);
         });
-
-        let playText = this.add.text(this.cameras.main.width - 150, this.cameras.main.height - 100, 'Play', { fontSize: '32px', fill: '#FFF' })
+        let gameStarted = this.registry.get('gameStarted');
+        let buttonText = gameStarted ? 'Restart' : 'Play';
+        let playText = this.add.text(this.cameras.main.width - 150, this.cameras.main.height - 100, buttonText, { fontSize: '32px', fill: '#FFF' })
             .setInteractive()
             .on('pointerdown', () => this.scene.start('GameScene', { level: 'level-1' }));
 

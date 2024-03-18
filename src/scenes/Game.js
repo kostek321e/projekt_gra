@@ -11,7 +11,7 @@ class Game extends Phaser.Scene {
         this.remainingEnemies = 0;
         this.totalEnemies = 0;
         this.enemiesText = null;
-
+        this.lives = 3;
     }
 
     preload() {
@@ -25,7 +25,7 @@ class Game extends Phaser.Scene {
             spacing: 2,
         });
         this.load.image('clouds-sheet', 'assets/tilesets/clouds.png');
-
+        this.load.image('heart', 'assets/collectibles/Sprite_heart.png');
         this.load.spritesheet('hero-idle-sheet', 'assets/hero/idle.png', {
             frameWidth: 32,
             frameHeight: 64,
@@ -63,6 +63,7 @@ class Game extends Phaser.Scene {
             frameHeight: 64,
         });
         this.load.image('collectableKey', 'assets/collectibles/diamond.png');
+        this.load.image('enemy_icon', 'assets/collectibles/enemy_icon.png');
         this.load.audio('gameMusic', 'assets/music/game_music.wav');
         this.load.audio('stepMud', 'assets/music/step_mud.wav');
         this.load.audio('jumpSound', 'assets/music/jump.wav');
@@ -72,6 +73,9 @@ class Game extends Phaser.Scene {
     }
 
     create(data) {
+        this.registry.set('gameStarted', true);
+        this.collectedDiamonds = 0;
+        this.lives = 3;
         const volume = this.registry.get('volume');
         let volume2;
         if(volume >= 0.1)
@@ -156,6 +160,7 @@ class Game extends Phaser.Scene {
         this.createEnemiesUI();
         this.updateEnemiesText();
         this.createEndZone();
+        this.createLivesDisplay();
         this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
         const menuButton = this.add.text(this.cameras.main.width - 50, this.cameras.main.height - 50, 'Menu', {
             fontSize: '32px',
@@ -173,7 +178,33 @@ class Game extends Phaser.Scene {
 
 
     }
+    createEnemiesUI() {
+        this.enemiesText = this.add.text(this.cameras.main.width - 20, 10, '0/0', {
+            fontSize: '32px',
+            fill: '#FF0000'
+        }).setScrollFactor(0).setOrigin(1, 0);
+        this.enemyImage = this.add.image(this.cameras.main.width - 10, 19, 'enemy_icon').setScale(0.8).setScrollFactor(0);
 
+    }
+    createLivesDisplay() {
+        this.livesText = this.add.text(40, 10, `${this.lives}`, {
+            fontSize: '32px',
+            fill: '#FFFFFF'
+        }).setScrollFactor(0).setOrigin(0, 0);
+
+        this.heartImage = this.add.image(25, 23, 'heart').setScale(1.5).setScrollFactor(0);
+    }
+    createUI() {
+        this.diamondsText = this.add.text(40, 35, '0/0', {
+            fontSize: '32px',
+            fill: '#FFFFFF'
+        }).setScrollFactor(0).setOrigin(0, 0);
+        this.diamondImage = this.add.image(25, 50, 'collectableKey').setScale(1.5).setScrollFactor(0);
+
+    }
+    updateLivesDisplay() {
+        this.livesText.setText(`${this.lives}`);
+    }
     shutdown() {
         if (this.gameMusic) {
             this.gameMusic.stop();
@@ -226,18 +257,8 @@ class Game extends Phaser.Scene {
             });
         }
     }
-    createEnemiesUI() {
-        this.enemiesText = this.add.text(this.cameras.main.width - 10, 10, '0/0', {
-            fontSize: '32px',
-            fill: '#FF0000'
-        }).setScrollFactor(0).setOrigin(1, 0);
-    }
-    createUI() {
-        this.diamondsText = this.add.text(10, 10, '0/0', {
-            fontSize: '32px',
-            fill: '#FFFFFF'
-        }).setScrollFactor(0).setOrigin(0, 0);
-    }
+
+
     updateDiamondsText() {
         this.diamondsText.setText(`${this.collectedDiamonds}/${this.totalDiamonds}`);
     }
@@ -359,16 +380,26 @@ class Game extends Phaser.Scene {
         this.handleCollisions();
 
         if (this.hero.isDead() && this.hero.getBounds().top > cameraBottom + 100) {
-            this.hero.destroy();
-            this.addHero();
-            this.enemies.clear(true);
-            this.createEnemy();
-            this.collectables.clear(true);
-            this.createCollectables();
-            this.collectedDiamonds = 0;
-            this.updateDiamondsText();
-            this.updateEnemiesText();
-            this.createEndZone();
+            this.lives -= 1;
+            this.updateLivesDisplay();
+            if (this.lives > 0) {
+                this.hero.destroy();
+                this.addHero();
+                this.createEndZone();
+            }else{
+                this.lives = 3;
+                this.updateLivesDisplay();
+                this.hero.destroy();
+                this.addHero();
+                this.createEndZone();
+                this.enemies.clear(true);
+                this.createEnemy();
+                this.collectables.clear(true);
+                this.createCollectables();
+                this.collectedDiamonds = 0;
+                this.updateDiamondsText();
+                this.updateEnemiesText();
+            }
         }
         this.enemies.getChildren().forEach(enemy => {
             enemy.update();
