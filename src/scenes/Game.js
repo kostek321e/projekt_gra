@@ -62,6 +62,9 @@ class Game extends Phaser.Scene {
             frameWidth: 32,
             frameHeight: 64,
         });
+        this.load.image('leftButton', 'assets/buttons/left_arrow.png');
+        this.load.image('rightButton', 'assets/buttons/right_arrow.png');
+        this.load.image('jumpButton', 'assets/buttons/jump_button.png');
         this.load.image('collectableKey', 'assets/collectibles/diamond.png');
         this.load.image('enemy_icon', 'assets/collectibles/enemy_icon.png');
         this.load.audio('gameMusic', 'assets/music/game_music.wav');
@@ -152,7 +155,10 @@ class Game extends Phaser.Scene {
             repeat: -1
         });
         this.addMap(levelKey);
-
+        if (this.sys.game.device.os.android || this.sys.game.device.os.iOS) {
+        //if (1 ==1 ) {
+                this.createMobileControls();
+        }
         this.addHero();
         this.createEnemy();
         this.createCollectables();
@@ -163,7 +169,13 @@ class Game extends Phaser.Scene {
         this.createEndZone();
         this.createLivesDisplay();
         this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
-        const menuButton = this.add.text(this.cameras.main.width - 50, this.cameras.main.height - 50, 'Menu', {
+let width;
+        if (this.sys.game.device.os.android || this.sys.game.device.os.iOS) {
+          width = 250;
+        }else{
+            width = 50;
+        }
+        const menuButton = this.add.text(this.cameras.main.width - width, this.cameras.main.height - 30, 'Menu', {
             fontSize: '32px',
             fill: '#FFF'
         })
@@ -177,6 +189,19 @@ class Game extends Phaser.Scene {
         this.events.on('shutdown', this.shutdown, this);
         this.events.on('pause', this.shutdown, this);
 
+    }
+    createMobileControls() {
+        const leftButton = this.add.image(50, this.cameras.main.height - 30, 'leftButton').setScale(0.3).setInteractive().setScrollFactor(0);
+        const rightButton = this.add.image(130, this.cameras.main.height - 30, 'rightButton').setScale(0.3).setInteractive().setScrollFactor(0);
+        const jumpButton = this.add.image(this.cameras.main.width - 100, this.cameras.main.height - 30, 'jumpButton').setScale(0.25).setInteractive().setScrollFactor(0);
+        leftButton.on('pointerdown', () => this.hero.moveLeft = true);
+        leftButton.on('pointerup', () => this.hero.moveLeft = false);
+
+        rightButton.on('pointerdown', () => this.hero.moveRight = true);
+        rightButton.on('pointerup', () => this.hero.moveRight = false);
+
+        jumpButton.on('pointerdown', () => this.hero.doJump = true);
+        jumpButton.on('pointerup', () => this.hero.doJump = false);
     }
     createEnemiesUI() {
         this.enemiesText = this.add.text(this.cameras.main.width - 20, 10, '0/0', {

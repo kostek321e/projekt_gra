@@ -23,6 +23,9 @@ class Hero extends Phaser.GameObjects.Sprite {
         this.input = {};
         this.setupAnimations();
         this.setupMovement();
+        this.moveLeft = false;
+        this.moveRight = false;
+        this.doJump = false;
     }
 
     setupAnimations() {
@@ -127,23 +130,34 @@ class Hero extends Phaser.GameObjects.Sprite {
         if (this.body.onFloor()) {
             this.jumpCount = 0;
         }
-        this.input.didPressJump = !this.isDead() && Phaser.Input.Keyboard.JustDown(this.keys.up);
+        //this.input.didPressJump = !this.isDead() && (Phaser.Input.Keyboard.JustDown(this.keys.up) || this.doJump);
+        this.input.disPressJump2 = !this.isDead() && this.doJump;
+        const willJump = (Phaser.Input.Keyboard.JustDown(this.keys.up) || this.doJump) && this.jumpCount < 1;
 
-        if (!this.isDead() && this.keys.left.isDown) {
+        if (!this.isDead() && (this.keys.left.isDown || this.moveLeft)) {
             this.body.setAccelerationX(-1000);
             this.setFlipX(true);
             this.body.offset.x = 8;
-        } else if (!this.isDead() && this.keys.right.isDown) {
+        } else if (!this.isDead() && (this.keys.right.isDown || this.moveRight)) {
             this.body.setAccelerationX(1000);
             this.setFlipX(false);
             this.body.offset.x = 12;
         } else {
             this.body.setAccelerationX(0);
         }
-        if (this.input.didPressJump && this.jumpCount < 1) {
-            this.scene.sound.play('jumpSound', { volume: this.scene.registry.get('volume') });
-            this.jumpCount++;
-            this.body.setVelocityY(-400);
+        const shouldJump = !this.isDead() && (Phaser.Input.Keyboard.JustDown(this.keys.up) || this.doJump) && this.jumpCount < 2;
+
+        // if (this.input.didPressJump && this.jumpCount < 1) {
+        // //if (shouldJump) {
+        //     this.scene.sound.play('jumpSound', { volume: this.scene.registry.get('volume') });
+        //     this.jumpCount++;
+        //     this.body.setVelocityY(-400);
+        //     // if (this.doJump) {
+        //     //     this.doJump = false;
+        //     // }
+        // }
+        if (willJump) {
+            this.jump();
         }
         if (this.moveState.is('jumping') || this.moveState.is('flipping')) {
             if (!this.keys.up.isDown && this.body.velocity.y < -150) {
@@ -165,7 +179,12 @@ class Hero extends Phaser.GameObjects.Sprite {
             }
         }
     }
-
+    jump() {
+        this.scene.sound.play('jumpSound', { volume: this.scene.registry.get('volume') });
+        this.jumpCount++;
+        this.body.setVelocityY(-400);
+        this.doJump = false; // Resetowanie flagi doJump, aby uniknąć wielokrotnych skoków
+    }
     isFalling() {
         return this.body.velocity.y > 0;
     }
